@@ -3,8 +3,8 @@ import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
 import { Sun } from 'lucide-react';
 import { defineConfig, loadEnv } from 'vite';
 
-const BACKEND_URL = process.env.VITE_BACKEND_URL;
-const GOOGLE_MAPS_API_KEY = process.env.VITE_GOOGLE_MAPS_API_KEY;
+const BACKEND_URL =  import.meta.env.VITE_BACKEND_URL;
+const GOOGLE_MAPS_API_KEY =  import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
 
 const mapContainerStyle = {
   width: '70%',
@@ -148,6 +148,7 @@ export const LightForm = () => {
   }, [updateMap]);
 
   const handleClick = async () => {
+    console.log('Current BACKEND_URL:', BACKEND_URL); // Debug log
     const url = new URL(`${BACKEND_URL}/light_score/`);
     url.searchParams.append('country', country);
     url.searchParams.append('city', city);
