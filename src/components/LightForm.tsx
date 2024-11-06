@@ -148,7 +148,6 @@ export const LightForm = () => {
   }, [updateMap]);
 
   const handleClick = async () => {
-    console.log('Current BACKEND_URL:', BACKEND_URL); // Debug log
     const url = new URL(`${BACKEND_URL}/light_score/`);
     url.searchParams.append('country', country);
     url.searchParams.append('city', city);
