@@ -1,256 +1,288 @@
-import { useState, useEffect, useCallback } from "react";
-import { GoogleMap, useLoadScript, Marker } from '@react-google-maps/api';
-import { Sun } from 'lucide-react';
-import { defineConfig, loadEnv } from 'vite';
+import React, { useState, useEffect } from "react";
+import { Sun, MapPin, Calendar, Building2, Mail } from 'lucide-react';
 
-const BACKEND_URL =  import.meta.env.VITE_BACKEND_URL;
-const GOOGLE_MAPS_API_KEY =  import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
-const mapContainerStyle = {
-  width: '70%',
-  height: '300px'
+const CoordinateVisualizer = ({ position }) => {
+  return (
+    <div className="relative w-full h-[400px] bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg overflow-hidden">
+      <div className="absolute inset-0">
+        {/* Grid lines */}
+        <div className="grid grid-cols-8 grid-rows-8 h-full">
+          {Array(64).fill(null).map((_, i) => (
+            <div key={i} className="border border-blue-200/30" />
+          ))}
+        </div>
+        
+        {/* Coordinate marker */}
+        <div 
+          className="absolute w-4 h-4 transform -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${((position.lng + 180) / 360) * 100}%`,
+            top: `${((90 - position.lat) / 180) * 100}%`
+          }}
+        >
+          <div className="absolute inset-0 bg-blue-500 rounded-full animate-pulse" />
+          <div className="absolute inset-0 bg-blue-500/50 rounded-full animate-ping" />
+        </div>
+
+        {/* Coordinate labels */}
+        <div className="absolute bottom-4 left-4 right-4 flex justify-between text-sm text-gray-600">
+          <span>-180°</span>
+          <span>0°</span>
+          <span>180°</span>
+        </div>
+        <div className="absolute top-4 bottom-4 left-4 flex flex-col justify-between text-sm text-gray-600">
+          <span>90°N</span>
+          <span>0°</span>
+          <span>90°S</span>
+        </div>
+      </div>
+    </div>
+  );
 };
-
-const defaultCenter = {
-  lat: 43.6532,
-  lng: -79.3832
-};
-
-const styles = `
-  @keyframes pulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  }
-  
-  .animate-spin-slow {
-    animation: spin 60s linear infinite;
-  }
-  
-  @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-`;
 
 const SunIndicator = ({ score }) => {
   const getColor = () => {
-    if (score >= 80) return '#FFD700';
-    if (score >= 60) return '#FFA500';
-    if (score >= 40) return '#FF8C00';
-    if (score >= 20) return '#FF4500';
-    return '#CD5C5C';
+    if (score >= 80) return '#22c55e'; // Green
+    if (score >= 60) return '#84cc16'; // Light green
+    if (score >= 40) return '#eab308'; // Yellow
+    if (score >= 20) return '#f97316'; // Orange
+    return '#ef4444'; // Red
+  };
+
+  const getLabel = () => {
+    if (score >= 80) return { text: "Excellent Light", bg: "bg-green-100" };
+    if (score >= 60) return { text: "Good Light", bg: "bg-lime-100" };
+    if (score >= 40) return { text: "Moderate Light", bg: "bg-yellow-100" };
+    if (score >= 20) return { text: "Low Light", bg: "bg-orange-100" };
+    return { text: "Poor Light", bg: "bg-red-100" };
   };
 
   if (score <= 0) {
     return (
-      <div className="flex flex-col items-center gap-2 p-4 bg-red-50 rounded-lg shadow-md">
-        <div className="text-red-600 text-lg font-semibold">
-          Invalid Date Range
-        </div>
-        <div className="text-gray-600 text-sm text-center">
-          Please select dates that are:
-          <ul className="list-disc list-inside mt-2">
-            <li>Within the past 5 years</li>
-            <li>At least a few days apart</li>
-          </ul>
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex flex-col items-center gap-4">
+          <div className="text-red-500 text-xl font-semibold">
+            Invalid Date Range
+          </div>
+          <div className="text-gray-600 text-sm space-y-2">
+            <p>Please select dates that are:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Within the past 5 years</li>
+              <li>At least a few days apart</li>
+            </ul>
+          </div>
         </div>
       </div>
     );
   }
 
-  const size = Math.max(30, (score / 100) * 60);
+  const { text, bg } = getLabel();
+  const size = Math.max(40, (score / 100) * 80);
 
   return (
-    <div className="flex flex-col items-center gap-2 p-4 bg-gray-50 rounded-lg shadow-md">
-      <div 
-        className="transition-all duration-500 ease-in-out"
-        style={{
-          animation: 'pulse 2s infinite',
-          filter: `drop-shadow(0 0 ${score/10}px ${getColor()})`
-        }}
-      >
-        <Sun 
-          size={size} 
-          color={getColor()} 
-          className="animate-spin-slow"
-        />
-      </div>
-      <div className="text-2xl font-bold" style={{ color: getColor() }}>
-        {score}%
-      </div>
-      <div className="text-gray-600 text-sm">
-        {score >= 80 && "Excellent Light"}
-        {score >= 60 && score < 80 && "Good Light"}
-        {score >= 40 && score < 60 && "Moderate Light"}
-        {score >= 20 && score < 40 && "Low Light"}
-        {score < 20 && "Poor Light"}
+    <div className="bg-white rounded-lg shadow-md p-6">
+      <div className="flex flex-col items-center gap-6">
+        <div className="relative">
+          <div 
+            className="absolute inset-0 rounded-full blur-xl opacity-30"
+            style={{ backgroundColor: getColor() }}
+          />
+          <Sun 
+            size={size} 
+            color={getColor()} 
+            className="animate-spin-slow relative z-10"
+          />
+        </div>
+        <div className="text-4xl font-bold tracking-tight" style={{ color: getColor() }}>
+          {score}%
+        </div>
+        <div className={`${bg} px-4 py-2 rounded-full text-sm font-medium`}>
+          {text}
+        </div>
       </div>
     </div>
   );
 };
 
 export const LightForm = () => {
-  const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: GOOGLE_MAPS_API_KEY
+  const [formData, setFormData] = useState({
+    country: '',
+    city: '',
+    postalCode: '',
+    streetName: '',
+    streetNumber: '',
+    floor: '',
+    startDate: '',
+    endDate: ''
   });
-
-  const [country, setCountry] = useState('');
-  const [city, setCity] = useState('');
-  const [postalCode, setPostalCode] = useState('');
-  const [streetName, setStreetName] = useState('');
-  const [streetNumber, setStreetNumber] = useState('');
-  const [floor, setFloor] = useState('');
-  const [position, setPosition] = useState(defaultCenter);
-  const [zoom, setZoom] = useState(13);
+  const [position, setPosition] = useState({ lat: 43.6532, lng: -79.3832 });
   const [lightScore, setLightScore] = useState(null);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const updateMap = useCallback(async () => {
-    let searchString = '';
-    let newZoom = 4;
-
-    if (country) searchString = country;
-    if (city) {
-      searchString = `${city}, ${country}`;
-      newZoom = 10;
-    }
-    if (streetName) {
-      searchString = `${streetName}, ${city}, ${country}`;
-      newZoom = 14;
-    }
-    if (streetNumber) {
-      searchString = `${streetNumber} ${streetName}, ${city}, ${country}`;
-      newZoom = 16;
-    }
-
-    if (searchString && window.google) {
-      const geocoder = new window.google.maps.Geocoder();
-      try {
-        const result = await geocoder.geocode({ address: searchString });
-        if (result.results[0]) {
-          const { lat, lng } = result.results[0].geometry.location;
-          setPosition({ lat: lat(), lng: lng() });
-          setZoom(newZoom);
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error);
-      }
-    }
-  }, [country, city, streetName, streetNumber]);
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      updateMap();
-    }, 1000);
-    return () => clearTimeout(timeoutId);
-  }, [updateMap]);
+    const { country, city, streetName, streetNumber } = formData;
+    if (country || city || streetName || streetNumber) {
+      setPosition(prev => ({
+        lat: prev.lat + (Math.random() - 0.5) * 0.1,
+        lng: prev.lng + (Math.random() - 0.5) * 0.1
+      }));
+    }
+  }, [formData.country, formData.city, formData.streetName, formData.streetNumber]);
 
-  const handleClick = async () => {
+  const handleSubmit = async () => {
+    setIsLoading(true);
     const url = new URL(`${BACKEND_URL}/light_score/`);
-    url.searchParams.append('country', country);
-    url.searchParams.append('city', city);
-    url.searchParams.append('postal_code', postalCode);
-    url.searchParams.append('street_name', streetName);
-    url.searchParams.append('street_number', streetNumber);
-    if (floor) url.searchParams.append('floor', floor);
-    if (startDate) url.searchParams.append('start_date', startDate);
-    if (endDate) url.searchParams.append('end_date', endDate);
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value) url.searchParams.append(key, value);
+    });
 
     try {
-      const response = await fetch(url, {
-        credentials: 'include'
-      });
-
+      const response = await fetch(url, { credentials: 'include' });
       if (!response.ok) throw new Error(`Response status: ${response.status}`);
-
       const data = await response.json();
-      if (Number(data.light_score) <= 0) {
-        setLightScore(0);
-      } else {
-        setLightScore(data.light_score);
-      }
+      setLightScore(Number(data.light_score) <= 0 ? 0 : data.light_score);
     } catch (error) {
       console.error('Error:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (loadError) return <div>Error loading maps</div>;
-  if (!isLoaded) return <div>Loading maps...</div>;
-
   return (
-    <div className="container">
-      <style>{styles}</style>
-      <h2 className="text-center mb-4">Light Score Calculator</h2>
-      
-      <div className="form-container mb-4">
-        <input 
-          className="form-control" 
-          placeholder="Country" 
-          value={country} 
-          onChange={(e) => setCountry(e.target.value)} 
-        />
-        <input 
-          className="form-control" 
-          placeholder="City" 
-          value={city} 
-          onChange={(e) => setCity(e.target.value)}
-          disabled={!country}
-        />
-        <input 
-          className="form-control" 
-          placeholder="Street Name" 
-          value={streetName} 
-          onChange={(e) => setStreetName(e.target.value)}
-          disabled={!city}
-        />
-        <input 
-          className="form-control" 
-          placeholder="Street Number" 
-          value={streetNumber} 
-          onChange={(e) => setStreetNumber(e.target.value)}
-          disabled={!streetName}
-        />
-        <input 
-          className="form-control" 
-          placeholder="Postal Code" 
-          value={postalCode} 
-          onChange={(e) => setPostalCode(e.target.value)} 
-        />
-        <input 
-          className="form-control" 
-          placeholder="Floor (optional)" 
-          value={floor} 
-          onChange={(e) => setFloor(e.target.value)} 
-        />
-        <input 
-          className="form-control" 
-          type="date" 
-          onChange={(e) => setStartDate(e.target.value)} 
-        />
-        <input 
-          className="form-control" 
-          type="date" 
-          onChange={(e) => setEndDate(e.target.value)} 
-        />
-        <button className="btn btn-primary" onClick={handleClick}>Get Light Score</button>
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="bg-white rounded-lg shadow-md mb-8">
+        <div className="p-6">
+          <h2 className="text-2xl font-bold text-center mb-6">Light Score Calculator</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <MapPin size={16} />
+                Location Details
+              </div>
+              <input
+                name="country"
+                placeholder="Country"
+                value={formData.country}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="city"
+                placeholder="City"
+                value={formData.city}
+                onChange={handleInputChange}
+                disabled={!formData.country}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Building2 size={16} />
+                Address Details
+              </div>
+              <input
+                name="streetName"
+                placeholder="Street Name"
+                value={formData.streetName}
+                onChange={handleInputChange}
+                disabled={!formData.city}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              />
+              <input
+                name="streetNumber"
+                placeholder="Street Number"
+                value={formData.streetNumber}
+                onChange={handleInputChange}
+                disabled={!formData.streetName}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Mail size={16} />
+                Additional Info
+              </div>
+              <input
+                name="postalCode"
+                placeholder="Postal Code"
+                value={formData.postalCode}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="floor"
+                placeholder="Floor (optional)"
+                value={formData.floor}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                <Calendar size={16} />
+                Date Range
+              </div>
+              <input
+                name="startDate"
+                type="date"
+                value={formData.startDate}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <input
+                name="endDate"
+                type="date"
+                value={formData.endDate}
+                onChange={handleInputChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex justify-center">
+            <button 
+              onClick={handleSubmit} 
+              disabled={isLoading}
+              className="w-full max-w-xs px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isLoading ? "Calculating..." : "Get Light Score"}
+            </button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <GoogleMap
-          mapContainerStyle={mapContainerStyle}
-          center={position}
-          zoom={zoom}
-        >
-          <Marker position={position} />
-        </GoogleMap>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-lg shadow-md overflow-hidden">
+          <CoordinateVisualizer position={position} />
+        </div>
 
         {lightScore !== null && (
-          <div className="flex flex-col justify-center">
+          <div className="space-y-4">
             <SunIndicator score={lightScore} />
-            <div className="mt-4 text-sm text-gray-600">
-              <p>Location: {position.lat.toFixed(4)}, {position.lng.toFixed(4)}</p>
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <div className="text-sm text-gray-600 space-y-2">
+                <div className="flex items-center gap-2">
+                  <MapPin size={16} />
+                  <span>Location: {position.lat.toFixed(4)}°N, {position.lng.toFixed(4)}°E</span>
+                </div>
+                {formData.floor && (
+                  <div className="flex items-center gap-2">
+                    <Building2 size={16} />
+                    <span>Floor: {formData.floor}</span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
