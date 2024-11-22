@@ -42,13 +42,16 @@ const CoordinateVisualizer = ({ position }) => {
   );
 };
 
-const SunIndicator = ({ score }) => {
+
+const SunIndicator = ({ scoreData }) => {
+  const score = scoreData?.light_score || 0;
+  
   const getColor = () => {
-    if (score >= 80) return '#22c55e'; // Green
-    if (score >= 60) return '#84cc16'; // Light green
-    if (score >= 40) return '#eab308'; // Yellow
-    if (score >= 20) return '#f97316'; // Orange
-    return '#ef4444'; // Red
+    if (score >= 80) return '#22c55e';
+    if (score >= 60) return '#84cc16';
+    if (score >= 40) return '#eab308';
+    if (score >= 20) return '#f97316';
+    return '#ef4444';
   };
 
   const getLabel = () => {
@@ -64,14 +67,10 @@ const SunIndicator = ({ score }) => {
       <div className="bg-white rounded-lg shadow-md p-6">
         <div className="flex flex-col items-center gap-4">
           <div className="text-red-500 text-xl font-semibold">
-            Invalid Date Range
+            Invalid Data
           </div>
-          <div className="text-gray-600 text-sm space-y-2">
-            <p>Please select dates that are:</p>
-            <ul className="list-disc list-inside space-y-1">
-              <li>Within the past 5 years</li>
-              <li>At least a few days apart</li>
-            </ul>
+          <div className="text-gray-600 text-sm text-center">
+            Unable to calculate light score. Please check your inputs.
           </div>
         </div>
       </div>
@@ -89,11 +88,7 @@ const SunIndicator = ({ score }) => {
             className="absolute inset-0 rounded-full blur-xl opacity-30"
             style={{ backgroundColor: getColor() }}
           />
-          <Sun 
-            size={size} 
-            color={getColor()} 
-            className="animate-spin-slow relative z-10"
-          />
+          <Sun size={size} color={getColor()} className="animate-spin-slow relative z-10" />
         </div>
         <div className="text-4xl font-bold tracking-tight" style={{ color: getColor() }}>
           {score}%
@@ -101,6 +96,15 @@ const SunIndicator = ({ score }) => {
         <div className={`${bg} px-4 py-2 rounded-full text-sm font-medium`}>
           {text}
         </div>
+        {scoreData?.details && (
+          <div className="w-full text-sm text-gray-600">
+            <div className="space-y-2">
+              <div>Base Score: {scoreData.details.base_score}%</div>
+              <div>Floor Bonus: +{scoreData.details.floor_bonus}%</div>
+              <div>Direction: {scoreData.details.direction}</div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -115,15 +119,25 @@ export const LightForm = () => {
     streetNumber: '',
     floor: '',
     startDate: '',
-    endDate: ''
+    endDate: '',
+    direction: ''
   });
   const [position, setPosition] = useState({ lat: 43.6532, lng: -79.3832 });
-  const [lightScore, setLightScore] = useState(null);
+  const [scoreData, setScoreData] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const directions = [
+    { value: 'N', label: 'North' },
+    { value: 'S', label: 'South' },
+    { value: 'E', label: 'East' },
+    { value: 'W', label: 'West' }
+  ];
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError('');
   };
 
   useEffect(() => {
@@ -138,6 +152,15 @@ export const LightForm = () => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
+    setError('');
+    
+    // Validate required fields
+    if (!formData.country || !formData.city || !formData.streetName || !formData.streetNumber) {
+      setError('Please fill in all required fields');
+      setIsLoading(false);
+      return;
+    }
+
     const url = new URL(`${BACKEND_URL}/light_score/`);
     Object.entries(formData).forEach(([key, value]) => {
       if (value) url.searchParams.append(key, value);
@@ -145,11 +168,14 @@ export const LightForm = () => {
 
     try {
       const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Response status: ${response.status}`);
+      if (!response.ok) {
+        throw new Error(`Error: ${response.status}`);
+      }
       const data = await response.json();
-      setLightScore(Number(data.light_score) <= 0 ? 0 : data.light_score);
+      setScoreData(data);
     } catch (error) {
       console.error('Error:', error);
+      setError('Failed to calculate light score. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -162,6 +188,7 @@ export const LightForm = () => {
           <h2 className="text-2xl font-bold text-center mb-6">Light Score Calculator</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Location Details */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <MapPin size={16} />
@@ -169,14 +196,14 @@ export const LightForm = () => {
               </div>
               <input
                 name="country"
-                placeholder="Country"
+                placeholder="Country *"
                 value={formData.country}
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <input
                 name="city"
-                placeholder="City"
+                placeholder="City *"
                 value={formData.city}
                 onChange={handleInputChange}
                 disabled={!formData.country}
@@ -184,6 +211,7 @@ export const LightForm = () => {
               />
             </div>
 
+            {/* Address Details */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Building2 size={16} />
@@ -191,7 +219,7 @@ export const LightForm = () => {
               </div>
               <input
                 name="streetName"
-                placeholder="Street Name"
+                placeholder="Street Name *"
                 value={formData.streetName}
                 onChange={handleInputChange}
                 disabled={!formData.city}
@@ -199,7 +227,7 @@ export const LightForm = () => {
               />
               <input
                 name="streetNumber"
-                placeholder="Street Number"
+                placeholder="Street Number *"
                 value={formData.streetNumber}
                 onChange={handleInputChange}
                 disabled={!formData.streetName}
@@ -207,6 +235,7 @@ export const LightForm = () => {
               />
             </div>
 
+            {/* Additional Info */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Mail size={16} />
@@ -219,15 +248,32 @@ export const LightForm = () => {
                 onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-              <input
-                name="floor"
-                placeholder="Floor (optional)"
-                value={formData.floor}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="grid grid-cols-2 gap-2">
+                <input
+                  name="floor"
+                  placeholder="Floor"
+                  type="number"
+                  value={formData.floor}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  name="direction"
+                  value={formData.direction}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Direction</option>
+                  {directions.map(dir => (
+                    <option key={dir.value} value={dir.value}>
+                      {dir.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
+            {/* Date Range */}
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                 <Calendar size={16} />
@@ -250,6 +296,12 @@ export const LightForm = () => {
             </div>
           </div>
 
+          {error && (
+            <div className="mt-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+              {error}
+            </div>
+          )}
+
           <div className="mt-6 flex justify-center">
             <button 
               onClick={handleSubmit} 
@@ -267,9 +319,9 @@ export const LightForm = () => {
           <CoordinateVisualizer position={position} />
         </div>
 
-        {lightScore !== null && (
+        {scoreData && (
           <div className="space-y-4">
-            <SunIndicator score={lightScore} />
+            <SunIndicator scoreData={scoreData} />
             <div className="bg-white rounded-lg shadow-md p-6">
               <div className="text-sm text-gray-600 space-y-2">
                 <div className="flex items-center gap-2">
@@ -280,6 +332,12 @@ export const LightForm = () => {
                   <div className="flex items-center gap-2">
                     <Building2 size={16} />
                     <span>Floor: {formData.floor}</span>
+                  </div>
+                )}
+                {formData.direction && (
+                  <div className="flex items-center gap-2">
+                    <Compass size={16} />
+                    <span>Direction: {directions.find(d => d.value === formData.direction)?.label}</span>
                   </div>
                 )}
               </div>
