@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Sun, MapPin, Calendar, Building2, Mail } from 'lucide-react';
+import { Sun, MapPin, Calendar, Building2, Mail, Compass } from 'lucide-react';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
