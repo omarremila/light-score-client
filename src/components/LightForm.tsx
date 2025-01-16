@@ -1,9 +1,44 @@
 import React, { useState, useEffect } from "react";
-import { Sun, MapPin, Calendar, Building2, Mail, Compass } from 'lucide-react';
+import { Sun, MapPin, Building2, Compass } from 'lucide-react';
+import GoogleMapsVisualizer from './GoogleMapsVisualizer'
+const BACKEND_URL = "https://light-score-production.up.railway.app/";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+interface FormData {
+  streetName: string;
+  streetNumber: string;
+  postalCode: string;
+  floor: string;
+  direction: string;
+}
 
-const CoordinateVisualizer = ({ position }) => {
+interface ScoreData {
+  light_score: number;
+  details?: {
+    base_score: number;
+    floor_bonus: number;
+    direction: string;
+  };
+}
+
+interface Position {
+  lat: number;
+  lng: number;
+}
+
+interface CoordinateVisualizerProps {
+  position: Position;
+  address?: {
+    streetNumber: string;
+    streetName: string;
+  };
+  onLocationSelect?: (position: Position) => void;
+}
+
+const CoordinateVisualizer: React.FC<CoordinateVisualizerProps> = ({ 
+  position,
+  address,
+  onLocationSelect 
+}) => {
   return (
     <div className="relative w-full h-96 bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 rounded-lg overflow-hidden">
       <div className="absolute inset-0">
@@ -12,8 +47,8 @@ const CoordinateVisualizer = ({ position }) => {
             <div key={i} className="border border-blue-200/30" />
           ))}
         </div>
-        
-        <div 
+
+        <div
           className="absolute w-4 h-4 transform -translate-x-1/2 -translate-y-1/2"
           style={{
             left: `${((position.lng + 180) / 360) * 100}%`,
@@ -39,9 +74,9 @@ const CoordinateVisualizer = ({ position }) => {
   );
 };
 
-const SunIndicator = ({ scoreData }) => {
+const SunIndicator: React.FC<{ scoreData: ScoreData }> = ({ scoreData }) => {
   const score = scoreData?.light_score || 0;
-  
+
   const getColor = () => {
     if (score >= 80) return '#22c55e';
     if (score >= 60) return '#84cc16';
@@ -76,7 +111,7 @@ const SunIndicator = ({ scoreData }) => {
     <div className="bg-white rounded-lg shadow-md p-6">
       <div className="flex flex-col items-center gap-6">
         <div className="relative">
-          <div 
+          <div
             className="absolute inset-0 rounded-full blur-xl opacity-30"
             style={{ backgroundColor: getColor() }}
           />
@@ -102,16 +137,16 @@ const SunIndicator = ({ scoreData }) => {
   );
 };
 
-export const LightForm = () => {
-  const [formData, setFormData] = useState({
+export const LightForm: React.FC = () => {
+  const [formData, setFormData] = useState<FormData>({
     streetName: '',
     streetNumber: '',
     postalCode: '',
     floor: '',
     direction: ''
   });
-  const [position, setPosition] = useState({ lat: 43.6532, lng: -79.3832 });
-  const [scoreData, setScoreData] = useState(null);
+  const [position, setPosition] = useState<Position>({ lat: 43.6532, lng: -79.3832 });
+  const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -122,33 +157,32 @@ export const LightForm = () => {
     { value: 'W', label: 'West' }
   ];
 
-  const handleInputChange = (e) => {
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setError('');
   };
 
   useEffect(() => {
-    const { streetName, streetNumber } = formData;
-    if (streetName || streetNumber) {
+    //const { streetName, streetNumber } = formData;
+    if (formData.streetNumber && formData.streetName) {
       setPosition(prev => ({
         lat: prev.lat + (Math.random() - 0.5) * 0.1,
         lng: prev.lng + (Math.random() - 0.5) * 0.1
       }));
     }
   }, [formData.streetName, formData.streetNumber]);
-
-  const handleSubmit = async () => {
+  /*const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
-    
+
     if (!formData.streetName || !formData.streetNumber) {
       setError('Please fill in street name and number');
       setIsLoading(false);
       return;
     }
 
-    const url = new URL(`${BACKEND_URL}/light_score/`);
+    const url = new URL('light_score', BACKEND_URL);
     url.searchParams.append('city', 'Toronto');
     url.searchParams.append('country', 'Canada');
     Object.entries(formData).forEach(([key, value]) => {
@@ -167,20 +201,76 @@ export const LightForm = () => {
       setIsLoading(false);
     }
   };
+  */
+// Replace the handleSubmit function in LightForm.tsx
+// Update the position setter callback
+const handleLocationSelect = (newPosition: { lat: number; lng: number }) => {
+  setPosition(newPosition);
+};
+const handleSubmit = async () => {
+  setIsLoading(true);
+  setError('');
 
+  if (!formData.streetName || !formData.streetNumber) {
+    setError('Please fill in street name and number');
+    setIsLoading(false);
+    return;
+  }
+
+  try {
+    // Simulate API call with random score
+    const mockResponse = {
+      coordinates: {
+        lat: 43.64154 + (Math.random() - 0.5) * 0.01,
+        lng: -79.383458 + (Math.random() - 0.5) * 0.01
+      },
+      light_score: Math.floor(Math.random() * 100),
+      details: {
+        score: Math.floor(Math.random() * 100),
+        reason: "No buildings found"
+      },
+      building_data: null
+    };
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    setScoreData({
+      light_score: mockResponse.light_score,
+      details: {
+        base_score: mockResponse.details.score,
+        floor_bonus: Math.floor(Math.random() * 10),
+        direction: formData.direction || 'N'
+      }
+    });
+
+    // Update position with the mock coordinates
+    setPosition({
+      lat: mockResponse.coordinates.lat,
+      lng: mockResponse.coordinates.lng
+    });
+
+  } catch (error) {
+    console.error('Error:', error);
+    setError('Failed to calculate light score. Please try again.');
+  } finally {
+    setIsLoading(false);
+  }
+};
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="text-center mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 rounded-2xl text-white">
         <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-pink-200">Toronto Light Score Calculator</h1>
         <p className="text-lg max-w-2xl mx-auto text-blue-100">
-          Discover the natural light potential of any Toronto address. Our calculator analyzes building position, elevation, and orientation to provide a comprehensive light score, helping you make informed decisions about your living or working space.
+          Discover the natural light potential of any Toronto address. Our calculator analyzes building position, elevation, and orientation to provide a comprehensive light score.
         </p>
       </div>
+
       <div className="bg-gradient-to-br from-white to-blue-50 rounded-lg shadow-xl mb-8 border border-blue-100">
         <div className="p-6">
           <h2 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600 mb-2">Enter Address Details</h2>
           <p className="text-gray-600 mb-6">Fill in the address information to calculate the natural light score</p>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-sm font-medium bg-clip-text text-transparent bg-gradient-to-r from-blue-600 to-purple-600">
@@ -246,8 +336,8 @@ export const LightForm = () => {
           )}
 
           <div className="mt-6 flex justify-center">
-            <button 
-              onClick={handleSubmit} 
+            <button
+              onClick={handleSubmit}
               disabled={isLoading}
               className="w-full max-w-xs px-4 py-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 text-white rounded-md hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
             >
@@ -258,10 +348,16 @@ export const LightForm = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <CoordinateVisualizer position={position} />
-        </div>
-
+      <div className="bg-white rounded-lg shadow-md overflow-hidden h-96">
+  <GoogleMapsVisualizer 
+    position={position}
+    address={{
+      streetNumber: formData.streetNumber,
+      streetName: formData.streetName
+    }}
+    onLocationSelect={handleLocationSelect}
+  />
+</div>
         {scoreData && (
           <div className="space-y-4">
             <SunIndicator scoreData={scoreData} />

@@ -6,3 +6,11 @@ buildCommand = "npm run build"
 startCommand = "serve -s dist"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
+
+[http]
+[http.cors]
+enabled = true
+origins = ["https://ligh-score-production.up.railway.app"]
+methods = ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+headers = ["*"]
+credentials = true

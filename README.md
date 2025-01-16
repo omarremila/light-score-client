@@ -103,6 +103,6 @@ npm install
 ### 5. Run the Development Server
 Once everything is installed, run the development server to verify that the project works correctly:
 
-npm run dev
+npm run build
 
 This should resolve any issues with the corrupted archive or JSON parsing errors.
