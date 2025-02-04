@@ -165,7 +165,6 @@ export const LightForm: React.FC = () => {
   const handleLocationSelect = (position: Position) => {
     setPosition(position);
   };
-
   const [formData, setFormData] = useState<FormData>({
     streetName: '',
     streetNumber: '',
@@ -175,19 +174,17 @@ export const LightForm: React.FC = () => {
   });
 
   // Keep position state for map
-  const [position, setPosition] = useState<Position>({
+  const [position] = useState<Position>({
     lat: 43.6532,
     lng: -79.3832
   });
 
-  // Add state for address validation
-  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
 
   // Replace the random position useEffect with a geocoding function
   useEffect(() => {
     const geocodeAddress = async () => {
       if (!formData.streetNumber || !formData.streetName) return;
-    
+      
       setIsValidatingAddress(true);
       try {
         const addressString = `${formData.streetNumber} ${formData.streetName}, Toronto, ON, Canada`;
@@ -232,78 +229,15 @@ export const LightForm: React.FC = () => {
         setIsValidatingAddress(false);
       }
     };
-
+  
     // Add a small delay to avoid too many API calls while typing
     const timeoutId = setTimeout(() => {
       geocodeAddress();
     }, 1000);
-
+  
     // Cleanup timeout on component unmount or when dependencies change
     return () => clearTimeout(timeoutId);
-  }, [formData.streetName, formData.streetNumber]);
-  const handleSubmit = async () => {
-    setIsLoading(true);
-    setError('');
-  
-    if (!formData.streetName || !formData.streetNumber) {
-      setError('Please fill in street name and number');
-      setIsLoading(false);
-      return;
-    }
-  
-    const url = new URL('light_score', BACKEND_URL);
-    
-    // Add the address components
-    url.searchParams.append('city', 'Toronto');
-    url.searchParams.append('country', 'Canada');
-    Object.entries(formData).forEach(([key, value]) => {
-      if (key === 'floor') {
-        url.searchParams.append(key, String(value || 1));
-      } else if (value) {
-        url.searchParams.append(key, value);
-      }
-    });
-  
-    try {
-      console.log('Fetching from:', url.toString());
-      const response = await fetch(url.toString(), {
-        redirect: 'follow', // Explicitly follow redirects
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-  
-      if (!response.ok) {
-        console.log('Response not ok:', response.status, response.statusText);
-        throw new Error(`Error: ${response.status}`);
-      }
-      
-      // Try to parse JSON directly
-      try {
-        const data = await response.json();
-        console.log('Parsed data:', data);
-        setScoreData(data);
-      } catch (parseError) {
-        console.error('JSON Parse error:', parseError);
-        // Fallback to text if JSON parse fails
-        const rawResponse = await response.text();
-        console.log('Raw response:', rawResponse);
-        try {
-          const data = JSON.parse(rawResponse);
-          console.log('Parsed from text:', data);
-          setScoreData(data);
-        } catch (secondParseError) {
-          throw new Error('Failed to parse response data');
-        }
-      }
-    } catch (error) {
-      console.error('Error details:', error);
-      setError('Failed to calculate light score. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  }, [formData.streetName, formData.streetNumber]);.
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -397,14 +331,7 @@ export const LightForm: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-white rounded-lg shadow-md overflow-hidden h-96">
-  <GoogleMapsVisualizer 
-    position={position}
-    address={{
-      streetNumber: formData.streetNumber,
-      streetName: formData.streetName
-    }}
-    onLocationSelect={handleLocationSelect}
-  />
+
 </div>
         {scoreData && (
           <div className="space-y-4">
