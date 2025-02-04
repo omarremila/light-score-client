@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Sun, MapPin, Building2, Compass } from 'lucide-react';
-import GoogleMapsVisualizer from './GoogleMapsVisualizer'
 const BACKEND_URL = "https://light-score-production.up.railway.app/";
 
 interface FormData {
@@ -162,9 +161,7 @@ export const LightForm: React.FC = () => {
     }));
     setError('');
   };
-  const handleLocationSelect = (position: Position) => {
-    setPosition(position);
-  };
+
   const [formData, setFormData] = useState<FormData>({
     streetName: '',
     streetNumber: '',
@@ -180,64 +177,55 @@ export const LightForm: React.FC = () => {
   });
 
 
-  // Replace the random position useEffect with a geocoding function
-  useEffect(() => {
-    const geocodeAddress = async () => {
-      if (!formData.streetNumber || !formData.streetName) return;
-      
-      setIsValidatingAddress(true);
-      try {
-        const addressString = `${formData.streetNumber} ${formData.streetName}, Toronto, ON, Canada`;
-        
-        const url = new URL('geocode', BACKEND_URL);
-        url.searchParams.append('address', addressString);
+  const handleSubmit = async () => {
+    setIsLoading(true);
+    setError('');
+  
+    if (!formData.streetName || !formData.streetNumber) {
+      setError('Please fill in street name and number');
+      setIsLoading(false);
+      return;
+    }
+  
+    const url = new URL('light_score', BACKEND_URL);
     
-        const response = await fetch(url.toString(), {
-          redirect: 'follow',
-          headers: {
-            'Accept': 'application/json'
-          }
-        });
-    
-        if (!response.ok) {
-          throw new Error('Failed to geocode address');
-        }
-    
-        try {
-          const data = await response.json();
-          if (data.lat && data.lng) {
-            setPosition({
-              lat: data.lat,
-              lng: data.lng
-            });
-          }
-        } catch (parseError) {
-          console.error('JSON Parse error:', parseError);
-          const rawResponse = await response.text();
-          console.log('Raw response:', rawResponse);
-          const data = JSON.parse(rawResponse);
-          if (data.lat && data.lng) {
-            setPosition({
-              lat: data.lat,
-              lng: data.lng
-            });
-          }
-        }
-      } catch (error) {
-        console.error('Geocoding error:', error);
-      } finally {
-        setIsValidatingAddress(false);
+    // Add the address components
+    url.searchParams.append('city', 'Toronto');
+    url.searchParams.append('country', 'Canada');
+    Object.entries(formData).forEach(([key, value]) => {
+      if (key === 'floor') {
+        url.searchParams.append(key, String(value || 1));
+      } else if (value) {
+        url.searchParams.append(key, value);
       }
-    };
+    });
   
-    // Add a small delay to avoid too many API calls while typing
-    const timeoutId = setTimeout(() => {
-      geocodeAddress();
-    }, 1000);
+    try {
+      console.log('Request URL:', url.toString());
+      const response = await fetch(url.toString(), {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
   
-    // Cleanup timeout on component unmount or when dependencies change
-    return () => clearTimeout(timeoutId);
-  }, [formData.streetName, formData.streetNumber]);.
+      if (!response.ok) {
+        console.log('Response not ok:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.log('Error response body:', errorText);
+        throw new Error(`Error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Response data:', data);
+      setScoreData(data);
+    } catch (error) {
+      console.error('Error details:', error);
+      setError('Failed to calculate light score. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
