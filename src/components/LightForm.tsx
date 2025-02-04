@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Sun, MapPin, Building2, Compass } from 'lucide-react';
 import GoogleMapsVisualizer from './GoogleMapsVisualizer'
-const BACKEND_URL = `${window.location.protocol}//light-score-production.up.railway.app/`;
+const BACKEND_URL = "https://light-score-production.up.railway.app/";
 
 interface FormData {
   streetName: string;
