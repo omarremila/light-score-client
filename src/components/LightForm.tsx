@@ -186,38 +186,48 @@ export const LightForm: React.FC = () => {
   // Replace the random position useEffect with a geocoding function
   useEffect(() => {
     const geocodeAddress = async () => {
-      // Only proceed if we have both street number and name
       if (!formData.streetNumber || !formData.streetName) return;
-
+    
       setIsValidatingAddress(true);
       try {
-        // Construct the address string
         const addressString = `${formData.streetNumber} ${formData.streetName}, Toronto, ON, Canada`;
         
-        // Call the backend geocoding endpoint
         const url = new URL('geocode', BACKEND_URL);
         url.searchParams.append('address', addressString);
-
+    
         const response = await fetch(url.toString(), {
-          //credentials: 'include'
+          redirect: 'follow',
+          headers: {
+            'Accept': 'application/json'
+          }
         });
-
+    
         if (!response.ok) {
           throw new Error('Failed to geocode address');
         }
-
-        const data = await response.json();
-        
-        // Update position with real coordinates
-        if (data.coordinates) {
-          setPosition({
-            lat: data.coordinates.lat,
-            lng: data.coordinates.lng
-          });
+    
+        try {
+          const data = await response.json();
+          if (data.lat && data.lng) {
+            setPosition({
+              lat: data.lat,
+              lng: data.lng
+            });
+          }
+        } catch (parseError) {
+          console.error('JSON Parse error:', parseError);
+          const rawResponse = await response.text();
+          console.log('Raw response:', rawResponse);
+          const data = JSON.parse(rawResponse);
+          if (data.lat && data.lng) {
+            setPosition({
+              lat: data.lat,
+              lng: data.lng
+            });
+          }
         }
       } catch (error) {
         console.error('Geocoding error:', error);
-        // Optionally set an error state here
       } finally {
         setIsValidatingAddress(false);
       }
@@ -231,17 +241,16 @@ export const LightForm: React.FC = () => {
     // Cleanup timeout on component unmount or when dependencies change
     return () => clearTimeout(timeoutId);
   }, [formData.streetName, formData.streetNumber]);
-
   const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
-
+  
     if (!formData.streetName || !formData.streetNumber) {
       setError('Please fill in street name and number');
       setIsLoading(false);
       return;
     }
-
+  
     const url = new URL('light_score', BACKEND_URL);
     
     // Add the address components
@@ -254,32 +263,46 @@ export const LightForm: React.FC = () => {
         url.searchParams.append(key, value);
       }
     });
-
+  
     try {
       console.log('Fetching from:', url.toString());
-      const response = await fetch(url.toString());
-
+      const response = await fetch(url.toString(), {
+        redirect: 'follow', // Explicitly follow redirects
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+  
       if (!response.ok) {
         console.log('Response not ok:', response.status, response.statusText);
         throw new Error(`Error: ${response.status}`);
       }
       
-      // Log the raw response
-      const rawResponse = await response.text();
-      console.log('Raw response:', rawResponse);
-      
-      // Parse the JSON separately
-      const data = JSON.parse(rawResponse);
-      console.log('Parsed data:', data);
-      
-      setScoreData(data);
+      // Try to parse JSON directly
+      try {
+        const data = await response.json();
+        console.log('Parsed data:', data);
+        setScoreData(data);
+      } catch (parseError) {
+        console.error('JSON Parse error:', parseError);
+        // Fallback to text if JSON parse fails
+        const rawResponse = await response.text();
+        console.log('Raw response:', rawResponse);
+        try {
+          const data = JSON.parse(rawResponse);
+          console.log('Parsed from text:', data);
+          setScoreData(data);
+        } catch (secondParseError) {
+          throw new Error('Failed to parse response data');
+        }
+      }
     } catch (error) {
       console.error('Error details:', error);
       setError('Failed to calculate light score. Please try again.');
     } finally {
       setIsLoading(false);
     }
-};
+  };
 
 
   return (
