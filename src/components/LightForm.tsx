@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Sun, MapPin, Building2, Compass } from 'lucide-react';
+import torontoBackground from '../assets/toronto_background.mp4';
 const BACKEND_URL = "https://light-score-production.up.railway.app/";
 
 interface FormData {
@@ -180,9 +181,10 @@ export const LightForm: React.FC = () => {
   const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
+    setScoreData(null);
   
-    if (!formData.streetName || !formData.streetNumber) {
-      setError('Please fill in street name and number');
+    if (!formData.streetName || !formData.streetNumber || !formData.postalCode) {
+      setError('Please fill in street name, number, and postal code');
       setIsLoading(false);
       return;
     }
@@ -209,10 +211,23 @@ export const LightForm: React.FC = () => {
       });
   
       if (!response.ok) {
-        console.log('Response not ok:', response.status, response.statusText);
         const errorText = await response.text();
         console.log('Error response body:', errorText);
-        throw new Error(`Error: ${response.status} - ${errorText}`);
+        
+        // Parse the error response
+        try {
+          const errorData = JSON.parse(errorText);
+          if (response.status === 422 && errorData.detail) {
+            setError('Invalid address. Please check all fields are filled correctly.');
+          } else if (response.status === 404) {
+            setError('Address not found. Please check the address and try again.');
+          } else {
+            setError('Failed to calculate light score. Please try again.');
+          }
+        } catch {
+          setError('Failed to calculate light score. Please try again.');
+        }
+        return;
       }
       
       const data = await response.json();
@@ -224,10 +239,11 @@ export const LightForm: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+};
 
 
   return (
+    
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="text-center mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 rounded-2xl text-white">
         <h1 className="text-4xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-blue-200 to-pink-200">Toronto Light Score Calculator</h1>
