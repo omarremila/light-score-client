@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from "react";
 import { Sun, MapPin, Building2, Compass } from 'lucide-react';
 import GoogleMapsVisualizer from './GoogleMapsVisualizer'
-const BACKEND_URL = "https://light-score-production.up.railway.app/";
+const BACKEND_URL = "https://light-score-production.up.railway.app";
 
 interface FormData {
   streetName: string;
   streetNumber: string;
   postalCode: string;
-  floor: string;
+  floor: number;
   direction: string;
 }
 
@@ -33,6 +33,8 @@ interface CoordinateVisualizerProps {
   };
   onLocationSelect?: (position: Position) => void;
 }
+
+
 
 const CoordinateVisualizer: React.FC<CoordinateVisualizerProps> = ({ 
   position,
@@ -136,20 +138,14 @@ const SunIndicator: React.FC<{ scoreData: ScoreData }> = ({ scoreData }) => {
     </div>
   );
 };
-
 export const LightForm: React.FC = () => {
-  const [formData, setFormData] = useState<FormData>({
-    streetName: '',
-    streetNumber: '',
-    postalCode: '',
-    floor: '',
-    direction: ''
-  });
-  const [position, setPosition] = useState<Position>({ lat: 43.6532, lng: -79.3832 });
+
+
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Constants
   const directions = [
     { value: 'N', label: 'North' },
     { value: 'S', label: 'South' },
@@ -157,22 +153,86 @@ export const LightForm: React.FC = () => {
     { value: 'W', label: 'West' }
   ];
 
+  // Event handlers
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'floor' ? Number(value) || 0 : value
+    }));
     setError('');
   };
+  const handleLocationSelect = (position: Position) => {
+    setPosition(position);
+  };
 
+  const [formData, setFormData] = useState<FormData>({
+    streetName: '',
+    streetNumber: '',
+    postalCode: '',
+    floor: 0,
+    direction: ''
+  });
+
+  // Keep position state for map
+  const [position, setPosition] = useState<Position>({
+    lat: 43.6532,
+    lng: -79.3832
+  });
+
+  // Add state for address validation
+  const [isValidatingAddress, setIsValidatingAddress] = useState(false);
+
+  // Replace the random position useEffect with a geocoding function
   useEffect(() => {
-    //const { streetName, streetNumber } = formData;
-    if (formData.streetNumber && formData.streetName) {
-      setPosition(prev => ({
-        lat: prev.lat + (Math.random() - 0.5) * 0.1,
-        lng: prev.lng + (Math.random() - 0.5) * 0.1
-      }));
-    }
+    const geocodeAddress = async () => {
+      // Only proceed if we have both street number and name
+      if (!formData.streetNumber || !formData.streetName) return;
+
+      setIsValidatingAddress(true);
+      try {
+        // Construct the address string
+        const addressString = `${formData.streetNumber} ${formData.streetName}, Toronto, ON, Canada`;
+        
+        // Call the backend geocoding endpoint
+        const url = new URL('geocode', BACKEND_URL);
+        url.searchParams.append('address', addressString);
+
+        const response = await fetch(url.toString(), {
+          //credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to geocode address');
+        }
+
+        const data = await response.json();
+        
+        // Update position with real coordinates
+        if (data.coordinates) {
+          setPosition({
+            lat: data.coordinates.lat,
+            lng: data.coordinates.lng
+          });
+        }
+      } catch (error) {
+        console.error('Geocoding error:', error);
+        // Optionally set an error state here
+      } finally {
+        setIsValidatingAddress(false);
+      }
+    };
+
+    // Add a small delay to avoid too many API calls while typing
+    const timeoutId = setTimeout(() => {
+      geocodeAddress();
+    }, 1000);
+
+    // Cleanup timeout on component unmount or when dependencies change
+    return () => clearTimeout(timeoutId);
   }, [formData.streetName, formData.streetNumber]);
-  /*const handleSubmit = async () => {
+
+  const handleSubmit = async () => {
     setIsLoading(true);
     setError('');
 
@@ -183,80 +243,45 @@ export const LightForm: React.FC = () => {
     }
 
     const url = new URL('light_score', BACKEND_URL);
+    
+    // Add the address components
     url.searchParams.append('city', 'Toronto');
     url.searchParams.append('country', 'Canada');
     Object.entries(formData).forEach(([key, value]) => {
-      if (value) url.searchParams.append(key, value);
+      if (key === 'floor') {
+        url.searchParams.append(key, String(value || 1));
+      } else if (value) {
+        url.searchParams.append(key, value);
+      }
     });
 
     try {
-      const response = await fetch(url, { credentials: 'include' });
-      if (!response.ok) throw new Error(`Error: ${response.status}`);
-      const data = await response.json();
+      console.log('Fetching from:', url.toString());
+      const response = await fetch(url.toString());
+
+      if (!response.ok) {
+        console.log('Response not ok:', response.status, response.statusText);
+        throw new Error(`Error: ${response.status}`);
+      }
+      
+      // Log the raw response
+      const rawResponse = await response.text();
+      console.log('Raw response:', rawResponse);
+      
+      // Parse the JSON separately
+      const data = JSON.parse(rawResponse);
+      console.log('Parsed data:', data);
+      
       setScoreData(data);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('Error details:', error);
       setError('Failed to calculate light score. Please try again.');
     } finally {
       setIsLoading(false);
     }
-  };
-  */
-// Replace the handleSubmit function in LightForm.tsx
-// Update the position setter callback
-const handleLocationSelect = (newPosition: { lat: number; lng: number }) => {
-  setPosition(newPosition);
 };
-const handleSubmit = async () => {
-  setIsLoading(true);
-  setError('');
 
-  if (!formData.streetName || !formData.streetNumber) {
-    setError('Please fill in street name and number');
-    setIsLoading(false);
-    return;
-  }
 
-  try {
-    // Simulate API call with random score
-    const mockResponse = {
-      coordinates: {
-        lat: 43.64154 + (Math.random() - 0.5) * 0.01,
-        lng: -79.383458 + (Math.random() - 0.5) * 0.01
-      },
-      light_score: Math.floor(Math.random() * 100),
-      details: {
-        score: Math.floor(Math.random() * 100),
-        reason: "No buildings found"
-      },
-      building_data: null
-    };
-
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    setScoreData({
-      light_score: mockResponse.light_score,
-      details: {
-        base_score: mockResponse.details.score,
-        floor_bonus: Math.floor(Math.random() * 10),
-        direction: formData.direction || 'N'
-      }
-    });
-
-    // Update position with the mock coordinates
-    setPosition({
-      lat: mockResponse.coordinates.lat,
-      lng: mockResponse.coordinates.lng
-    });
-
-  } catch (error) {
-    console.error('Error:', error);
-    setError('Failed to calculate light score. Please try again.');
-  } finally {
-    setIsLoading(false);
-  }
-};
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="text-center mb-8 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 p-8 rounded-2xl text-white">
