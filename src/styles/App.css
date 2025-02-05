@@ -1,164 +1,243 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-.header {
-  background: linear-gradient(135deg, var(--color-primary), var(--color-secondary), var(--color-accent));
-  padding: 8rem 0;
-  color: white;
-  clip-path: polygon(0 0, 100% 0, 100% 80%, 0% 100%);
-  margin-bottom: 6rem;
+/* Import Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Bebas+Neue&display=swap');
+
+/* Global Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-.header h1 {
-  font-size: 6rem;
-  text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+/* Root Variables */
+:root {
+  --color-primary: #3b82f6;       /* Modern blue */
+  --color-secondary: #8b5cf6;     /* Complementary purple */
+  --color-accent: #ec4899;        /* Vibrant accent */
+  --color-bg: #1F2937;            /* Dark background */
+  --color-text: #F8FAFC;          /* Light text */
+  --color-text-light: #9CA3AF;
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-card-bg: rgba(255, 255, 255, 0.1);  /* Translucent for glass effect */
+  --transition-speed: 0.3s;
 }
 
-.header p {
-  color: white;
-  opacity: 0.8;
+/* Base Body Styles */
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.6;
+  overflow-x: hidden;
 }
 
-.form-container {
-  background: white;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7)); 
-  backdrop-filter: blur(20px);
-}
-
-/* ... rest of the styles ... */
-
-.score-card {
-  background: white;
+/* Full-Screen Container */
+.light-form-fullscreen {
   position: relative;
+  width: 100%;
+  height: 100vh;
   overflow: hidden;
 }
 
-.score-card::before,
-.score-card::after {
-  content: '';
+/* Background Video */
+.video-background {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  z-index: -2;
+  filter: brightness(0.75);  /* Darken slightly for contrast */
+}
+
+/* Video Overlay */
+.video-overlay {
   position: absolute;
-  width: 200px; 
-  height: 200px;
-  border-radius: 50%;
-  opacity: 0.6;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.3));
+  z-index: -1;
 }
 
-.score-card::before {
-  top: -50px;
-  right: -50px;
-  background: var(--color-accent); 
-}
-
-.score-card::after {
-  bottom: -50px; 
-  left: -50px;
-  background: var(--color-accent-2);
-}
-
-.score-card > * {
+/* Content Container */
+.light-form-content {
   position: relative;
   z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 1rem;
 }
 
-.score-icon::before {
-  background: conic-gradient(var(--color-accent), var(--color-accent-2), var(--color-accent-3), var(--color-accent));
-}
-
-:root {
-  --color-primary: #3b82f6;
-  --color-secondary: #8b5cf6;
-  --color-accent: #ec4899;
-  --color-bg: #F8FAFC;
-  --color-text: #1F2937;
-  --color-text-light: #6B7280;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  font-family: 'Inter', sans-serif;
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-.container {
-  max-width: 1200px;
-  margin: 0 auto;
+/* Card (Glassmorphism Style) */
+.card {
+  background: var(--color-card-bg);
+  backdrop-filter: blur(15px);
+  border-radius: 1rem;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   padding: 2rem;
+  transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+}
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.45);
 }
 
-h1 {
-  font-size: 4rem;
-  font-weight: 700;
-  margin-bottom: 1rem;
-}
-
-h2 {
-  font-size: 2.5rem;
-  font-weight: 600;
-  margin-bottom: 0.5rem;
-}
-
-p {
-  font-size: 1.25rem;
-}
-
-input, select, button {
-  font-family: inherit;
-  font-size: 1.125rem;
-}
-
+/* Inputs & Selects (Modern, Semi-Transparent) */
 input, select {
   width: 100%;
   padding: 1rem;
-  border: 2px solid #E5E7EB;
+  border: 2px solid transparent;
   border-radius: 0.5rem;
-  background-color: #fff;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--color-text);
   margin-bottom: 1.5rem;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: border-color var(--transition-speed), box-shadow var(--transition-speed), background var(--transition-speed);
+  font-size: 1rem;
 }
-
+input::placeholder,
+select::placeholder {
+  color: var(--color-text-light);
+}
 input:focus, select:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+  background: rgba(255, 255, 255, 0.25);
 }
 
+/* Button Styling */
 button {
   cursor: pointer;
   padding: 1rem 2rem;
   border: none;
   border-radius: 0.5rem;
-  background-color: var(--color-primary);
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
   color: #fff;
   font-weight: 600;
-  transition: background-color 0.3s, transform 0.3s;
+  transition: transform var(--transition-speed), box-shadow var(--transition-speed);
+  font-size: 1rem;
 }
-
 button:hover {
-  background-color: #2563eb;
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
-
 button:focus {
   outline: none;
   box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.4);
 }
-
 button:active {
   transform: translateY(0);
 }
-
 button:disabled {
-  opacity: 0.5;
+  opacity: 0.6;
   cursor: not-allowed;
 }
 
+/* Error Message */
 .error-message {
   color: #ef4444;
-  font-size: 1rem;
+  font-size: 0.9rem;
   margin-top: 0.5rem;
+  text-align: center;
+}
+
+/* Headings & Paragraphs */
+/* Using Bebas Neue for a bold, modern headline */
+h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2rem, 5vw, 4rem);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  text-align: center;
+  letter-spacing: 0.1em;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+h2 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(0.5rem, 2vw, 1.8rem);
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+  text-align: center;
+  letter-spacing: 0.1em;
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+h3 {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+p {
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+/* Utility Classes */
+.text-gradient {
+  background: linear-gradient(90deg, var(--color-primary), var(--color-secondary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+.shadow-lg {
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+}
+
+/* Custom Styling for the Toronto Light Score Title */
+.toronto-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(2.5rem, 6vw, 5rem);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: linear-gradient(90deg, #ff007a, #ff8500, #ffc107, var(--color-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.header-description {
+  font-family: 'Bebas Neue', sans-serif;
+  /* Even smaller header text size */
+  font-size: clamp(0.5rem, 1vw, 1.8rem);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background: linear-gradient(90deg, #ff007a, #ff8500, #ffc107, var(--color-primary));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.input text{
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  text-align: center;
+  background: linear-gradient(90deg, #ff007a, #ff8500, #ffc107, var(--color-primary));
+}
+.input-field {
+  color: #3b1111; /* or any color you prefer, e.g. #ff0000 for red */
+}
+
+.input-field::placeholder {
+  /* Existing color setting */
+  color: rgba(255, 255, 255, 0.6);
+
+  /* 1) Italic Style */
+  font-style: italic;
+
+  /* 2) Letter Spacing */
+  letter-spacing: 0.5px;
+
+  /* 3) Text Shadow */
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+
+  /* 4) Transition (for a smoother color change on focus) */
+  transition: color 0.2s ease-in-out;
 }
